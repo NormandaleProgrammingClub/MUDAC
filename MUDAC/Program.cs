@@ -16,12 +16,13 @@ namespace MUDAC
 
         //static string ServerURL = "73.164.14.207"; // Ben's Pi
         //static string TableName = "MUDAC.confinement_target";
-        static string ServerURL = "ncccpc.elysianisle.us"; // Ben's Pi
-        static string TableName = "MUDAC_TEST.confinement_target";
+        static string ServerURL = "ncccpc.elysianisle.us"; 
+        static string TableName = "MUDAC_TEST.CONFINEMENT_TAR_ST";
         static string DataFile = @"D:\Data\target_(1)\confinement_target.csv";
 
         static void Main(string[] args)
         {
+            Console.WriteLine("Server: " + ServerURL);
             Console.WriteLine("Please enter your MySQL server credentials:");
             Console.Write("Username: ");
             string u = Console.ReadLine();
@@ -30,7 +31,7 @@ namespace MUDAC
 
             try
             {
-                Console.WriteLine("Connecting to server...");
+                Console.WriteLine("Connecting to " + ServerURL + "...");
                 conn = new MySqlConnection(myConnectionString);
                 conn.Open();
                 Console.WriteLine("Connected");
@@ -65,7 +66,24 @@ namespace MUDAC
             Console.WriteLine("    Command: " + Command);
             Console.WriteLine();
 
+            int StartPoint = 1;
+            int TryStart = 1;
+            Console.WriteLine("Start importing at what line? ({ENTER} for default: 1)");
+            string Input = Console.ReadLine();
+            while(Input != "" && !Int32.TryParse(Input, out TryStart)) // If we have something, and that something doesn't work...
+            {
+                Console.WriteLine("What? Please try again");
+                Input = Console.ReadLine();
+            }
+            if (TryStart != 0) StartPoint = TryStart;
             int RowCounter = 1;
+
+            for(int i=1; i<StartPoint; i++)
+            {
+                reader.ReadLine();
+                RowCounter++;
+            }
+
             while (reader.Peek() >= 0)
             {
                 Console.WriteLine("Data Row " + RowCounter);
@@ -83,13 +101,21 @@ namespace MUDAC
                     }
 
                     comm.ExecuteNonQuery();
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Row " + RowCounter + " successfully imported");
+                    Console.ResetColor();
                 }
                 catch(MySqlException ex)
                 {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Failed to import row " + RowCounter + "!");
+                    Console.ResetColor();
                     Console.WriteLine(ex.Message);
                     Console.WriteLine();
-                    Console.WriteLine("Press {ENTER} to continue");
+                    Console.WriteLine("Press {ENTER} to halt and catch fire");
                     Console.ReadLine();
+                    return;
                 }
                 
                 RowCounter++;
