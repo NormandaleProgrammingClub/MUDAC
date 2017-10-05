@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.IO;
 using MySql.Data.MySqlClient;
 using Renci.SshNet;
+using System.Text.RegularExpressions;
 
 namespace MUDAC
 {
@@ -17,8 +18,8 @@ namespace MUDAC
         static string myConnectionString;
 
         static string ServerURL = "73.164.14.207"; // Ben's Pi
-        static string TableName = "MUDAC.CONFINEMENT_TAR_ST";
-        static string DataFile = @"D:\Data\target_(1)\confinement_target.csv";
+        static string TableName = "MUDAC_RAW.LABRESULTS_TAR_ST";
+        static string DataFile = @"D:\Data\target_(1)\labresults_target.csv";
 
         static void Main(string[] args)
         {
@@ -130,7 +131,11 @@ namespace MUDAC
             while (reader.Peek() >= 0)
             {
                 Console.WriteLine("Data Row " + RowCounter);
-                String[] LineData = reader.ReadLine().Replace("\r", "").Replace("\n", "").Split(',');
+                // Regex from here: https://stackoverflow.com/questions/3776458/split-a-comma-separated-string-with-both-quoted-and-unquoted-strings
+                String[] LineData = Regex.Matches(reader.ReadLine().Replace("\r", "").Replace("\n", ""), "(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)")
+                    .Cast<Match>()
+                    .Select(m => m.Groups[1].Value)
+                    .ToArray();
 
                 try
                 {
