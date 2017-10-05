@@ -6,39 +6,82 @@ using System.Threading.Tasks;
 
 using System.IO;
 using MySql.Data.MySqlClient;
+using Renci.SshNet;
 
 namespace MUDAC
 {
     class Program
     {
         static MySqlConnection conn;
+        static SshClient client;
         static string myConnectionString;
 
-        //static string ServerURL = "73.164.14.207"; // Ben's Pi
-        //static string TableName = "MUDAC.confinement_target";
-        static string ServerURL = "ncccpc.elysianisle.us"; 
-        static string TableName = "MUDAC_TEST.CONFINEMENT_TAR_ST";
+        static string ServerURL = "73.164.14.207"; // Ben's Pi
+        static string TableName = "MUDAC.CONFINEMENT_TAR_ST";
         static string DataFile = @"D:\Data\target_(1)\confinement_target.csv";
 
         static void Main(string[] args)
         {
+            // MySQL over SSH for C#: https://stackoverflow.com/questions/10806799/how-to-connect-to-mysql-from-c-sharp-over-ssh
+            // Using SSH.NET library: https://github.com/sshnet/SSH.NET
+
             Console.WriteLine("Server: " + ServerURL);
-            Console.WriteLine("Please enter your MySQL server credentials:");
+            Console.WriteLine();
+            Console.WriteLine("Please enter your SSH user credentials:");
             Console.Write("Username: ");
-            string u = Console.ReadLine();
+            string SSH_User = Console.ReadLine();
             Console.Write("Password: ");
-            myConnectionString = "server=" + ServerURL + ";uid=" + u + ";pwd=" + ReadPassword() + ";";
+            string SSH_Pass = ReadPassword();
+            Console.WriteLine();
+
+            try
+            {
+                Console.WriteLine("Connecting to " + ServerURL + ":22...");
+                PasswordConnectionInfo connectionInfo = new PasswordConnectionInfo(ServerURL, SSH_User, SSH_Pass);
+                connectionInfo.Timeout = TimeSpan.FromSeconds(30);
+                client = new SshClient(connectionInfo);
+                client.Connect();
+                ForwardedPortLocal portFwld = new ForwardedPortLocal("127.0.0.1", 3306, "127.0.0.1", 3306);
+                client.AddForwardedPort(portFwld);
+                portFwld.Start();
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Connected");
+                Console.ResetColor();
+            }
+            catch(Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Error connecting:");
+                Console.ResetColor();
+                Console.WriteLine(ex.Message);
+                Console.WriteLine();
+                Console.WriteLine("Press {ENTER} to halt and catch fire");
+                Console.ReadLine();
+                return;
+            }
+            Console.WriteLine();
+            
+            Console.WriteLine("Please enter your MySQL user credentials:");
+            Console.Write("Username: ");
+            string MySQLUser = Console.ReadLine();
+            Console.Write("Password: ");
+            string MySQLPass = ReadPassword();
+            myConnectionString = "server=127.0.0.1;uid=" + MySQLUser + ";pwd=" + MySQLPass + ";";
 
             try
             {
                 Console.WriteLine("Connecting to " + ServerURL + "...");
                 conn = new MySqlConnection(myConnectionString);
                 conn.Open();
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Connected");
+                Console.ResetColor();
             }
             catch (MySqlException ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Error connecting:");
+                Console.ResetColor();
                 Console.WriteLine(ex.Message);
                 Console.WriteLine();
                 Console.WriteLine("Press {ENTER} to halt and catch fire");
